@@ -1,0 +1,376 @@
+//
+//  ViewController.m
+//  texture-coordinates
+//
+//  Created by Christoph Halang on 28/02/15.
+//  Copyright (c) 2015 Christoph Halang. All rights reserved.
+//
+
+#import "ViewController.h"
+#import <OpenGLES/ES2/glext.h>
+#import "Geometry.h"
+#import "DLTriangle.h"
+
+@interface ViewController (){
+    EAGLContext* _context;
+    GLKBaseEffect* _effect;
+    GLuint _vertexBuffer;
+    GLuint _indexBuffer;
+    GLuint _vertexArray;
+    BOOL _initialized;
+    BOOL _stopRotate;
+    
+    GLKMatrix4 _rotMatrix;
+    GLKVector3 _anchor_position;
+    GLKVector3 _current_position;
+    GLKQuaternion _quatStart;
+    GLKQuaternion _quat;
+    
+    float _curRed;
+    BOOL _increasing;
+    
+    BOOL _slerping;
+    float _slerpCur;
+    float _slerpMax;
+    GLKQuaternion _slerpStart;
+    GLKQuaternion _slerpEnd;
+}
+
+@property GLKMatrix4 modelMatrix; // transformations of the model
+@property GLKMatrix4 viewMatrix; // camera position and orientation
+@property GLKMatrix4 projectionMatrix; // view frustum (near plane, far plane)
+@property GLKTextureInfo* textureInfo;
+@property float rotation;
+@property (strong, nonatomic) EAGLContext *context;
+@property (strong, nonatomic) GLKBaseEffect *effect;
+@end
+
+@implementation ViewController
+@synthesize context = _context;
+@synthesize effect = _effect;
+
+- (void)viewDidLoad {
+    
+    [super viewDidLoad];
+    _context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2];
+    
+    if (!_context) {
+        NSLog(@"Failed to create ES context");
+    }
+    
+    GLKView *view = (GLKView *) self.view;
+    view.context = _context;
+    view.drawableMultisample = GLKViewDrawableMultisample4X;
+    view.drawableDepthFormat = GLKViewDrawableDepthFormat24;
+    
+    self.viewMatrix = GLKMatrix4MakeLookAt(0.0, 0.0, 26.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+    self.projectionMatrix  = GLKMatrix4MakePerspective(GLKMathDegreesToRadians(65.0f), 4.0/3.0, 1, 51);
+    
+    [self initEffect];
+    [self setupGL];
+    
+}
+
+- (void)initEffect {
+    _effect = [[GLKBaseEffect alloc] init];
+    [self configureDefaultLight];
+    _initialized = YES;
+    _stopRotate = YES;
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+
+#pragma mark - Setup The Shader
+
+- (void)prepareEffectWithModelMatrix:(GLKMatrix4)modelMatrix viewMatrix:(GLKMatrix4)viewMatrix projectionMatrix:(GLKMatrix4)projectionMatrix{
+    _effect.transform.modelviewMatrix = GLKMatrix4Multiply(viewMatrix, modelMatrix);
+    _effect.transform.projectionMatrix = projectionMatrix;
+    [_effect prepareToDraw];
+}
+
+- (void)configureDefaultLight{
+    //Lightning
+    _effect.light0.enabled = GL_TRUE;
+    _effect.light0.ambientColor = GLKVector4Make(1, 1, 1, 1.0);
+    _effect.light0.diffuseColor = GLKVector4Make(1, 1, 1, 1.0);
+    _effect.light0.position = GLKVector4Make(0, 0,-10,1.0);
+}
+
+- (void)configureDefaultMaterial {
+    
+    _effect.texture2d0.enabled = NO;
+    
+    
+    _effect.material.ambientColor = GLKVector4Make(0.3,0.3,0.3,1.0);
+    _effect.material.diffuseColor = GLKVector4Make(0.3,0.3,0.3,1.0);
+    _effect.material.emissiveColor = GLKVector4Make(0.0,0.0,0.0,1.0);
+    _effect.material.specularColor = GLKVector4Make(0.0,0.0,0.0,1.0);
+    
+    _effect.material.shininess = 0;
+}
+
+- (void)configureDefaultTexture{
+    _effect.texture2d0.enabled = YES;
+    
+    NSString *path = [[NSBundle mainBundle] pathForResource:@"texture_numbers" ofType:@"png"];
+    
+    NSError *error;
+    NSDictionary *options = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES]
+                                                        forKey:GLKTextureLoaderOriginBottomLeft];
+    
+    
+    self.textureInfo = [GLKTextureLoader textureWithContentsOfFile:path
+                                                           options:options error:&error];
+    if (self.textureInfo == nil)
+        NSLog(@"Error loading texture: %@", [error localizedDescription]);
+    
+    
+    GLKEffectPropertyTexture *tex = [[GLKEffectPropertyTexture alloc] init];
+    tex.enabled = YES;
+    tex.envMode = GLKTextureEnvModeDecal;
+    tex.name = self.textureInfo.name;
+    
+    _effect.texture2d0.name = tex.name;
+    
+}
+
+#pragma mark - OpenGL Setup
+
+- (void)setupGL {
+    
+    [EAGLContext setCurrentContext:_context];
+    
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+    
+    // Enable Transparency
+    glEnable (GL_BLEND);
+    glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    
+    // Create Vertex Array Buffer For Vertex Array Objects
+    glGenVertexArraysOES(1, &_vertexArray);
+    glBindVertexArrayOES(_vertexArray);
+    
+    
+    // All of the following configuration for per vertex data is stored into the VAO
+    
+    // setup vertex buffer - what are my vertices?
+    glGenBuffers(1, &_vertexBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, _vertexBuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(VerticesCube), VerticesCube, GL_STATIC_DRAW);
+    
+    // setup index buffer - which vertices form a triangle?
+    glGenBuffers(1, &_indexBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _indexBuffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(IndicesTrianglesCube), IndicesTrianglesCube, GL_STATIC_DRAW);
+    
+    //Setup Vertex Atrributs
+    glEnableVertexAttribArray(GLKVertexAttribPosition);
+    //SYNTAX -,number of elements per vertex, datatype, FALSE, size of element, offset in datastructure
+    glVertexAttribPointer(GLKVertexAttribPosition, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *) offsetof(Vertex, Position));
+    
+    glEnableVertexAttribArray(GLKVertexAttribColor);
+    glVertexAttribPointer(GLKVertexAttribColor, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *) offsetof(Vertex, Color));
+    
+    //Textures
+    glEnableVertexAttribArray(GLKVertexAttribTexCoord0);
+    glVertexAttribPointer(GLKVertexAttribTexCoord0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *) offsetof(Vertex, TexCoord));
+    
+    //Normals
+    glEnableVertexAttribArray(GLKVertexAttribNormal);
+    glVertexAttribPointer(GLKVertexAttribNormal, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *) offsetof(Vertex, Normal));
+    
+    
+    glActiveTexture(GL_TEXTURE0);
+    [self configureDefaultTexture];
+    
+    
+    // were done so unbind the VAO
+    glBindVertexArrayOES(0);
+    
+    _rotMatrix = GLKMatrix4Identity;
+    _quat = GLKQuaternionMake(0, 0, 0, 1);
+    _quatStart = GLKQuaternionMake(0, 0, 0, 1);
+}
+
+- (void)tearDownGL {
+    
+    [EAGLContext setCurrentContext:_context];
+    
+    glDeleteBuffers(1, &_vertexBuffer);
+    glDeleteBuffers(1, &_indexBuffer);
+    glDeleteVertexArraysOES(1, &_vertexArray);
+    _effect = nil;
+    
+}
+
+#pragma mark - OpenGL Drawing
+
+- (void)update{
+    if (_increasing) {
+        _curRed += 1.0 * self.timeSinceLastUpdate;
+    } else {
+        _curRed -= 1.0 * self.timeSinceLastUpdate;
+    }
+    if (_curRed >= 1.0) {
+        _curRed = 1.0;
+        _increasing = NO;
+    }
+    if (_curRed <= 0.0) {
+        _curRed = 0.0;
+        _increasing = YES;
+    }
+    
+    float aspect = fabsf(self.view.bounds.size.width / self.view.bounds.size.height);
+    self.projectionMatrix = GLKMatrix4MakePerspective(GLKMathDegreesToRadians(65.0f), aspect, 0.1f, 100.0f);
+    if (!_stopRotate) self.rotation += self.timeSinceLastUpdate * 0.5f;
+    
+    if (_slerping) {
+        
+        _slerpCur += self.timeSinceLastUpdate;
+        float slerpAmt = _slerpCur / _slerpMax;
+        if (slerpAmt > 1.0) {
+            slerpAmt = 1.0;
+            _slerping = NO;
+        }
+        
+        _quat = GLKQuaternionSlerp(_slerpStart, _slerpEnd, slerpAmt);
+    }
+    
+    GLKMatrix4 modelViewMatrix = GLKMatrix4MakeTranslation(0.0f, 0.0f, -6.0f);
+    //modelViewMatrix = GLKMatrix4Multiply(modelViewMatrix, _rotMatrix);
+    GLKMatrix4 rotation = GLKMatrix4MakeWithQuaternion(_quat);
+    modelViewMatrix = GLKMatrix4Multiply(modelViewMatrix, rotation);
+    
+    self.effect.transform.modelviewMatrix = modelViewMatrix;
+}
+
+- (void)glkView:(GLKView *)view drawInRect:(CGRect)rect {
+    glClearColor(1.0, 1.0, 1.0, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    GLKMatrix4 scaleMatrix = GLKMatrix4MakeScale(3.0, 3.0, 3.0);
+    GLKMatrix4 translateMatrix = GLKMatrix4MakeTranslation(0, 0, 0);
+    GLKMatrix4 rotationMatrix = GLKMatrix4MakeRotation(self.rotation, 1.0, 1.0, 1.0);
+    
+    GLKMatrixStackRef matrixStack = GLKMatrixStackCreate(CFAllocatorGetDefault());
+    
+    GLKMatrixStackMultiplyMatrix4(matrixStack, translateMatrix);
+    GLKMatrixStackMultiplyMatrix4(matrixStack, rotationMatrix);
+    GLKMatrixStackMultiplyMatrix4(matrixStack, scaleMatrix);
+    
+    GLKMatrixStackPush(matrixStack);
+    self.modelMatrix = GLKMatrixStackGetMatrix4(matrixStack);
+    glBindVertexArrayOES(_vertexArray);
+    [self prepareEffectWithModelMatrix:self.modelMatrix viewMatrix:self.viewMatrix projectionMatrix:self.projectionMatrix];
+    glDrawElements(GL_TRIANGLES, sizeof(IndicesTrianglesCube) / sizeof(IndicesTrianglesCube[0]), GL_UNSIGNED_BYTE, 0);
+    glBindVertexArrayOES(0);
+    
+    CFRelease(matrixStack);
+    
+}
+
+
+# pragma mark - Gestures
+
+- (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    // Begin transformations
+//    _stopRotate = !_stopRotate;
+    
+    UITouch * touch = [touches anyObject];
+    CGPoint location = [touch locationInView:self.view];
+    
+    _anchor_position = GLKVector3Make(location.x, location.y, 0);
+    _anchor_position = [self projectOntoSurface:_anchor_position];
+    
+    _current_position = _anchor_position;
+    _quatStart = _quat;
+    
+    GLKVector3 vectors[3] = {   GLKVector3Make(0, 0, 1),
+        GLKVector3Make(0, 1, 0),
+        GLKVector3Make(1, 0, 0) };
+    
+    DLTriangle* triangle = [[DLTriangle alloc] initWithVectors:vectors];
+    
+    GLKVector3 rayDirection = GLKVector3Make(1, 1, 1);
+    
+    GLKVector3 rayOrigin = GLKVector3Make(0, 0, 0);
+    BOOL intersects = [triangle intersectsRayWithOrigin:rayOrigin direction:rayDirection intersectionDistance:nil];
+    
+    if (intersects)
+        NSLog(@"Ray should intersect triangle");
+    else
+        NSLog(@"Ray should not intersect triangle");
+}
+
+// Add new touchesMoved method
+- (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event {
+    UITouch * touch = [touches anyObject];
+    CGPoint location = [touch locationInView:self.view];
+    CGPoint lastLoc = [touch previousLocationInView:self.view];
+    CGPoint diff = CGPointMake(lastLoc.x - location.x, lastLoc.y - location.y);
+    
+    float rotX = -1 * GLKMathDegreesToRadians(diff.y / 2.0);
+    float rotY = -1 * GLKMathDegreesToRadians(diff.x / 2.0);
+    
+    bool isInvertible;
+    GLKVector3 xAxis = GLKMatrix4MultiplyVector3(GLKMatrix4Invert(_rotMatrix, &isInvertible), GLKVector3Make(1, 0, 0));
+    _rotMatrix = GLKMatrix4Rotate(_rotMatrix, rotX, xAxis.x, xAxis.y, xAxis.z);
+    GLKVector3 yAxis = GLKMatrix4MultiplyVector3(GLKMatrix4Invert(_rotMatrix, &isInvertible), GLKVector3Make(0, 1, 0));
+    _rotMatrix = GLKMatrix4Rotate(_rotMatrix, rotY, yAxis.x, yAxis.y, yAxis.z);
+    
+    _current_position = GLKVector3Make(location.x, location.y, 0);
+    _current_position = [self projectOntoSurface:_current_position];
+    
+    [self computeIncremental];
+}
+
+- (GLKVector3) projectOntoSurface:(GLKVector3) touchPoint
+{
+    float radius = self.view.bounds.size.width/3;
+    GLKVector3 center = GLKVector3Make(self.view.bounds.size.width/2, self.view.bounds.size.height/2, 0);
+    GLKVector3 P = GLKVector3Subtract(touchPoint, center);
+    
+    // Flip the y-axis because pixel coords increase toward the bottom.
+    P = GLKVector3Make(P.x, P.y * -1, P.z);
+    
+    float radius2 = radius * radius;
+    float length2 = P.x*P.x + P.y*P.y;
+    
+    if (length2 <= radius2)
+        P.z = sqrt(radius2 - length2);
+    else
+    {
+        /*
+         P.x *= radius / sqrt(length2);
+         P.y *= radius / sqrt(length2);
+         P.z = 0;
+         */
+        P.z = radius2 / (2.0 * sqrt(length2));
+        float length = sqrt(length2 + P.z * P.z);
+        P = GLKVector3DivideScalar(P, length);
+    }
+    
+    return GLKVector3Normalize(P);
+}
+
+- (void)computeIncremental {
+    
+    GLKVector3 axis = GLKVector3CrossProduct(_anchor_position, _current_position);
+    float dot = GLKVector3DotProduct(_anchor_position, _current_position);
+    float angle = acosf(dot);
+    
+    GLKQuaternion Q_rot = GLKQuaternionMakeWithAngleAndVector3Axis(angle * 2, axis);
+    Q_rot = GLKQuaternionNormalize(Q_rot);
+    
+    // TODO: Do something with Q_rot...
+    _quat = GLKQuaternionMultiply(Q_rot, _quatStart);
+}
+
+@end
