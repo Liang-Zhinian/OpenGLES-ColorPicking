@@ -17,9 +17,10 @@
 		2F3BAE1F1AA275E70040DDC4 /* texture_numbers.png in Resources */ = {isa = PBXBuildFile; fileRef = 2F3BAE1E1AA275E70040DDC4 /* texture_numbers.png */; };
 		2F3BAE211AA275F40040DDC4 /* GLKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2F3BAE201AA275F40040DDC4 /* GLKit.framework */; };
 		2F3BAE241AA276020040DDC4 /* Geometry.m in Sources */ = {isa = PBXBuildFile; fileRef = 2F3BAE231AA276020040DDC4 /* Geometry.m */; };
+		8A3B350921ABFD3800C3C8E3 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A3B350821ABFD3800C3C8E3 /* ViewController.m */; };
 		8A3CF08221AA496D00417F25 /* Camera.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A3CF08121AA496D00417F25 /* Camera.swift */; };
 		8AFDE10321A7AB75001BA52E /* DLTriangle.m in Sources */ = {isa = PBXBuildFile; fileRef = 8AFDE10221A7AB75001BA52E /* DLTriangle.m */; };
-		8AFDE10E21A800EF001BA52E /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 8AFDE10D21A800EF001BA52E /* ViewController.m */; };
+		8AFDE10E21A800EF001BA52E /* ViewController.m.txt1 in Sources */ = {isa = PBXBuildFile; fileRef = 8AFDE10D21A800EF001BA52E /* ViewController.m.txt1 */; };
 		8AFDE11021A80248001BA52E /* tile_floor.png in Resources */ = {isa = PBXBuildFile; fileRef = 8AFDE10F21A80248001BA52E /* tile_floor.png */; };
 /* End PBXBuildFile section */
 
@@ -51,11 +52,12 @@
 		2F3BAE201AA275F40040DDC4 /* GLKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GLKit.framework; path = System/Library/Frameworks/GLKit.framework; sourceTree = SDKROOT; };
 		2F3BAE221AA276020040DDC4 /* Geometry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Geometry.h; sourceTree = "<group>"; };
 		2F3BAE231AA276020040DDC4 /* Geometry.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Geometry.m; sourceTree = "<group>"; };
+		8A3B350821ABFD3800C3C8E3 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
 		8A3CF07E21AA495300417F25 /* texture-coordinates-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "texture-coordinates-Bridging-Header.h"; sourceTree = "<group>"; };
 		8A3CF08121AA496D00417F25 /* Camera.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Camera.swift; sourceTree = "<group>"; };
 		8AFDE10121A7AB75001BA52E /* DLTriangle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLTriangle.h; sourceTree = "<group>"; };
 		8AFDE10221A7AB75001BA52E /* DLTriangle.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLTriangle.m; sourceTree = "<group>"; };
-		8AFDE10D21A800EF001BA52E /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
+		8AFDE10D21A800EF001BA52E /* ViewController.m.txt1 */ = {isa = PBXFileReference; lastKnownFileType = text; path = ViewController.m.txt1; sourceTree = "<group>"; };
 		8AFDE10F21A80248001BA52E /* tile_floor.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = tile_floor.png; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -108,7 +110,8 @@
 				2F3BADFC1AA275910040DDC4 /* AppDelegate.h */,
 				2F3BADFD1AA275910040DDC4 /* AppDelegate.m */,
 				2F3BADFF1AA275910040DDC4 /* ViewController.h */,
-				8AFDE10D21A800EF001BA52E /* ViewController.m */,
+				8A3B350821ABFD3800C3C8E3 /* ViewController.m */,
+				8AFDE10D21A800EF001BA52E /* ViewController.m.txt1 */,
 				2F3BAE001AA275910040DDC4 /* ViewController.m.txt */,
 				2F3BAE021AA275910040DDC4 /* Main.storyboard */,
 				2F3BAE051AA275910040DDC4 /* Images.xcassets */,
@@ -251,8 +254,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8AFDE10E21A800EF001BA52E /* ViewController.m in Sources */,
+				8AFDE10E21A800EF001BA52E /* ViewController.m.txt1 in Sources */,
 				8AFDE10321A7AB75001BA52E /* DLTriangle.m in Sources */,
+				8A3B350921ABFD3800C3C8E3 /* ViewController.m in Sources */,
 				2F3BAE011AA275910040DDC4 /* ViewController.m.txt in Sources */,
 				2F3BAE241AA276020040DDC4 /* Geometry.m in Sources */,
 				2F3BADFE1AA275910040DDC4 /* AppDelegate.m in Sources */,
