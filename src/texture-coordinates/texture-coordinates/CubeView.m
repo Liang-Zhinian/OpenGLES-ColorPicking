@@ -274,19 +274,19 @@ GLuint indices[] = {};
         color.a = 1;
         
         GLuint* ves = [self genOneCubeVerticesAtPosition:pos Color: color];
-        let ins = genOneCubeIndices(appendIndex)
-        vertices.appendContentsOf(ves)
-        indices.appendContentsOf(ins)
-        pushVertexBuffer(appendIndex, number: 1)
-        pushIndexBuffer(appendIndex, number: 1)
-        appendIndex++
+        GLuint* ins = [self genOneCubeIndicesAtIndex:_appendIndex];
+//        vertices.appendContentsOf(ves);
+//        indices.appendContentsOf(ins);
+//        pushVertexBuffer(_appendIndex, number: 1);
+//        pushIndexBuffer(_appendIndex, number: 1);
+        _appendIndex++;
         
-        if delay < 1000{
-            delay = Utils.setDelay(0.005, closure: delayFn)
+        if (delay < 1000) {
+//            delay = Utils.setDelay(0.005, closure: delayFn);
         }
         
-    }
-    delayFn()
+    };
+    delayFn();
     
 }
 
