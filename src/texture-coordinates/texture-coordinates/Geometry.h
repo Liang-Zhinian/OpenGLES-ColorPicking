@@ -19,10 +19,17 @@ typedef struct {
 } Vertex;
 
 typedef struct{
-    int x;
-    int y;
-    int z;
+    float x;
+    float y;
+    float z;
 } Position;
+
+typedef struct{
+    float r;
+    float g;
+    float b;
+    float a;
+} Color;
 
 extern const Vertex VerticesCube[24];
 
