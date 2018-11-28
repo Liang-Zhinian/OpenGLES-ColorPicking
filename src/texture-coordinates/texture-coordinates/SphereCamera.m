@@ -21,7 +21,7 @@ const static float PI = M_PI;
 -(id)initWithWidth:(CGFloat)width
             Height:(CGFloat)height {
     
-    self = [self initWithWidth: width Height: height FieldOfView: 60 Near: 2 Far: 50 Beta:0 Garma:0 Radius:30 Target:GLKVector3Make(0,0,0)];
+    self = [self initWithWidth: width Height: height FieldOfView: 65 Near: 1 Far: 51 Beta:0 Garma:0 Radius:30 Target:GLKVector3Make(0,0,0)];
     
     return self;
 }

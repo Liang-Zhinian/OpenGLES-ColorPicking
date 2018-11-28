@@ -25,6 +25,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property GLKVector3 up;
 
 -(id)initWithWidth:(CGFloat)width Height:(CGFloat)height;
+-(void) updateBeta:(GLfloat) beta Garma:(GLfloat)garma;
 
 @end
 

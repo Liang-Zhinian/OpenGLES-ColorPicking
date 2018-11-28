@@ -11,6 +11,27 @@
 #import "Geometry.h"
 #import "SphereCamera.h"
 
+
+Position MakePosition(float f[3]){
+    Position p = {f[0], f[1], f[2]};
+    return p;
+}
+
+Color MakeColor(float r, float g, float b, float a){
+    Color c = {r, g, b, a};
+    return c;
+}
+
+Normal MakeNormal(float s, float t, float p) {
+    Normal n = {s, t, p};
+    return n;
+}
+
+Normal MakeNormal3(float f[3]) {
+    Normal n = {f[0], f[1], f[2]};
+    return n;
+}
+
 @interface ViewController (){
     float _curRed;
     BOOL _increasing;
@@ -36,6 +57,9 @@
     BOOL _initialized;
     
     BOOL _autoRotate;
+    
+    float _beta;
+    float _garma;
 }
 
 @property GLKMatrix4 modelMatrix; // transformations of the model
@@ -97,7 +121,7 @@
 
 - (void)prepareEffectWithModelMatrix:(GLKMatrix4)modelMatrix viewMatrix:(GLKMatrix4)viewMatrix projectionMatrix:(GLKMatrix4)projectionMatrix{
     _effect.transform.modelviewMatrix = GLKMatrix4Multiply(viewMatrix, modelMatrix);
-//    _effect.transform.modelviewMatrix = _camera.view;
+    _effect.transform.modelviewMatrix = GLKMatrix4Multiply(_camera.view, modelMatrix);
     _effect.transform.projectionMatrix = projectionMatrix;
     [_effect prepareToDraw];
 }
@@ -353,9 +377,10 @@
     _current_position = _anchor_position;
     _quatStart = _quat;
     
-    //
-    location.y = self.view.bounds.size.height - location.y;
-    [self pickAtX: location.x Y:location.y];
+    _beta = _camera.beta;
+    _garma = _camera.garma;
+    
+    [self pickAtX:location.x Y:location.y];
 }
 
 - (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event {
@@ -379,6 +404,11 @@
     
     [self computeIncremental];
     
+    CGPoint diff2 = CGPointMake(_current_position.x - _anchor_position.x, _current_position.y - _anchor_position.y);
+    float beta = GLKMathDegreesToRadians(diff2.y / 2.0);
+    float garma = GLKMathDegreesToRadians(diff2.x / 2.0);
+    
+    [_camera updateBeta:(_beta + beta) Garma:(_garma + garma)];
 }
 
 - (void)doubleTap:(UITapGestureRecognizer *)tap {
@@ -391,280 +421,110 @@
     
 }
 
-#pragma mark - Create a Framebuffer Object
-/////////////////////////////////////////////////////////////////
-// Build a Frame Buffer Object with attached Pixel Color Render
-// Buffer and Depth Buffer to receive the results of rendering
-// in false color for picking.
--(GLuint)buildFBOWithWidth:(GLuint)fboWidth
-                    height:(GLuint)fboHeight
-{
-    GLuint fboName;
-    GLuint colorTexture;
+#pragma mark - ray picking
+
+
+- (void) pickAtX:(CGFloat)x Y:(CGFloat)y {
     
-    // Create a texture object to apply to model
-    glGenTextures(1, &colorTexture);
-    glBindTexture(GL_TEXTURE_2D, colorTexture);
+    //follow http://schabby.de/picking-opengl-ray-tracing/
+    GLKVector3 viewVector3 = GLKVector3Normalize(GLKVector3Subtract(_camera.target, _camera.position));
+    GLKVector3 hVector3 = GLKVector3Normalize(GLKVector3CrossProduct(viewVector3, _camera.up));
+    GLKVector3 vVector3 = GLKVector3Normalize(GLKVector3CrossProduct(hVector3, viewVector3));
     
-    // Set up filter and wrap modes for this texture object
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
-                    GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
-                    GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-                    GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                    GL_LINEAR_MIPMAP_LINEAR);
+    CGFloat width = _camera.width;
+    CGFloat height = _camera.height;
     
-    // Allocate a texture image we can render into
-    // Pass NULL for the data parameter since we don't need to
-    // load image data. We will be generating the image by
-    // rendering to this texture.
-    glTexImage2D(GL_TEXTURE_2D,
-                 0,
-                 GL_RGBA,
-                 fboWidth,
-                 fboHeight,
-                 0,
-                 GL_RGBA,
-                 GL_UNSIGNED_BYTE,
-                 NULL);
+    // convert fovy to radians
+    float rad = _camera.fov * M_PI / 180;
+    float vLength = tan( rad / 2 ) * _camera.near;
+    float hLength = vLength * (width / height);
     
-    GLuint depthRenderbuffer;
-    glGenRenderbuffers(1, &depthRenderbuffer);
-    glBindRenderbuffer(GL_RENDERBUFFER, depthRenderbuffer);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16,
-                          fboWidth, fboHeight);
+    vVector3 = GLKVector3MultiplyScalar(vVector3, vLength);
+    hVector3 = GLKVector3MultiplyScalar(hVector3, hLength);
     
-    glGenFramebuffers(1, &fboName);
-    glBindFramebuffer(GL_FRAMEBUFFER, fboName);
-    glFramebufferTexture2D(GL_FRAMEBUFFER,
-                           GL_COLOR_ATTACHMENT0,
-                           GL_TEXTURE_2D, colorTexture, 0);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderbuffer);
+    // translate mouse coordinates so that the origin lies in the center
+    // of the view port
+    float xPoint = x - width / 2;
+    float yPoint = y - height / 2;
+    xPoint = xPoint/width * 2;
+    yPoint = -yPoint/height * 2;
     
-    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) !=
-       GL_FRAMEBUFFER_COMPLETE)
-    {
-        NSLog(@"failed to make complete framebuffer object %x", glCheckFramebufferStatus(GL_FRAMEBUFFER));
-        [self destroyFBO:fboName];
-        return 0;
-    }
     
-#ifdef DEBUG
-    {  // Report any errors
-        GLenum error = glGetError();
-        if(GL_NO_ERROR != error)
-        {
-            NSLog(@"GL Error: 0x%x", error);
+    
+    
+    // compute direction of picking ray by subtracting intersection point
+    
+    GLKVector3 direction = GLKVector3Add(GLKVector3MultiplyScalar(viewVector3, _camera.near), GLKVector3MultiplyScalar(hVector3, xPoint));
+    direction = GLKVector3Add(direction, GLKVector3MultiplyScalar(vVector3, yPoint));
+    
+    // linear combination to compute intersection of picking ray with
+    // view port plane
+    GLKVector3 near = GLKVector3Add(_camera.position, direction);
+    GLKVector3 far = GLKVector3Add(_camera.position, GLKVector3MultiplyScalar(direction, _camera.far / _camera.near));
+    
+    //print("near : " + String(near.x) + " " + String(near.y) + " " + String(near.z))
+    //print("far : " + String(far.x) + " " + String(far.y) + " " + String(far.z))
+    
+    for (int index = 1; index <= sizeof(IndicesTrianglesCube); index++) {
+        if (index != 1 && index % 3 == 0){
+            Position aa = MakePosition(VerticesCube[IndicesTrianglesCube[index-3]].Position);
+            Position bb = MakePosition(VerticesCube[IndicesTrianglesCube[index-2]].Position);
+            Position cc = MakePosition(VerticesCube[IndicesTrianglesCube[index-1]].Position);
+            Normal nn = MakeNormal3(VerticesCube[IndicesTrianglesCube[index-1]].Normal);
+            GLKVector3 a = GLKVector3Make(aa.x, aa.y, aa.z);
+            GLKVector3 b = GLKVector3Make(bb.x, bb.y, bb.z);
+            GLKVector3 c = GLKVector3Make(cc.x, cc.y, cc.z);
+            GLKVector3 n = GLKVector3Make(nn.s, nn.t, nn.p);
+            NSDictionary* data = [self intersectsTriangleWithNear: near
+                                                              Far: far
+                                                                A: a
+                                                                B: b
+                                                                C: c
+                                                           Normal: n];
+            BOOL intersect = [[data objectForKey:@"intersect"] boolValue];
+            if (intersect) {
+                Position result;
+                [[data objectForKey:@"result"] getValue:&result];
+                NSLog(@"%x %x %x", result.x, result.y, result.z);
+            }
         }
     }
-#endif
-    
-    return fboName;
 }
 
-
-/////////////////////////////////////////////////////////////////
-// This function deletes the specified FBO including all of its
-// attachments and returns resources to OpenGL
--(void) destroyFBO:(GLuint)fboName
-{
-    if(0 == fboName)
-    {
-        return;
+- (NSDictionary*) intersectsTriangleWithNear:(GLKVector3)near
+                                         Far:(GLKVector3)far
+                                           A:(GLKVector3)a
+                                           B:(GLKVector3)b
+                                           C:(GLKVector3)c
+                                      Normal:(GLKVector3)normal {
+    //follow http://sarvanz.blogspot.com/2012/03/probing-using-ray-casting-in-opengl.html
+    
+    GLKVector3 ray = GLKVector3Subtract(far, near);
+    float nDotL = GLKVector3DotProduct(normal, ray);
+    //是否跟三角面在同一平面或者背对三角面
+    if (nDotL >= 0) {
+        return @{ @"intersect": @NO, @"result": [NSNull null] };
     }
     
-    glBindFramebuffer(GL_FRAMEBUFFER, fboName);
-    
-    // Delete the attachment
-    [self deleteFBOAttachment:GL_COLOR_ATTACHMENT0];
-    
-    // Delete any depth or stencil buffer attached
-    [self deleteFBOAttachment:GL_DEPTH_ATTACHMENT];
-    
-    glDeleteFramebuffers(1, &fboName);
-}
-
-
-/////////////////////////////////////////////////////////////////
-// This function deletes the specified attachment and returns
-// resources to OpenGL
--(void) deleteFBOAttachment:(GLenum) attachment
-{
-    GLint param;
-    GLuint objName;
-    
-    glGetFramebufferAttachmentParameteriv(
-                                          GL_FRAMEBUFFER,
-                                          attachment,
-                                          GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE,
-                                          &param);
-    
-    if(GL_RENDERBUFFER == param)
-    {
-        glGetFramebufferAttachmentParameteriv(
-                                              GL_FRAMEBUFFER,
-                                              attachment,
-                                              GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME,
-                                              &param);
-        
-        objName = ((GLuint*)(&param))[0];
-        glDeleteRenderbuffers(1, &objName);
+    float d = GLKVector3DotProduct(normal, GLKVector3Subtract(a, near)) / nDotL;
+    //是否在最近点和最远点之外
+    if (d < 0 || d > 1) {
+        return @{ @"intersect": @NO, @"result": [NSNull null] };
     }
-    else if(GL_TEXTURE == param)
-    {
-        glGetFramebufferAttachmentParameteriv(
-                                              GL_FRAMEBUFFER,
-                                              attachment,
-                                              GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME,
-                                              &param);
-        
-        objName = ((GLuint*)(&param))[0];
-        glDeleteTextures(1, &objName);
+    
+    GLKVector3 p = GLKVector3Add(near, GLKVector3MultiplyScalar(ray, d));
+    GLKVector3 n1 = GLKVector3CrossProduct( GLKVector3Subtract(b, a),  GLKVector3Subtract(p, a));
+    GLKVector3 n2 = GLKVector3CrossProduct( GLKVector3Subtract(c, b),  GLKVector3Subtract(p, b));
+    GLKVector3 n3 = GLKVector3CrossProduct( GLKVector3Subtract(a, c),  GLKVector3Subtract(p, c));
+    
+    if (GLKVector3DotProduct(normal, n1) >= 0 &&
+        GLKVector3DotProduct(normal, n2) >= 0 &&
+        GLKVector3DotProduct(normal, n3) >= 0) {
+        NSDictionary *dictionary = @{ @"intersect": @YES, @"result": [NSValue value:&p withObjCType:@encode(GLKVector3)] };
+        return dictionary;
+    }else{
+        return @{ @"intersect": @NO, @"result": [NSNull null] };
     }
-}
-
-
--(NSUInteger)pickAtX:(GLuint)x Y:(GLuint)y {
-    GLKView *glView = (GLKView *)self.view;
-    NSAssert([glView isKindOfClass:[GLKView class]],
-             @"View controller's view is not a GLKView");
-    
-    // Make the view's context current
-    [EAGLContext setCurrentContext:glView.context];
-    
-    const GLfloat width = [glView drawableWidth];
-    const GLfloat height = [glView drawableHeight];
-    NSAssert(0 < width && 0 < height, @"Invalid drawble size");
-    
-    GLubyte pixelColor[4] = {0,};
-    
-    //    [self buildFBOWithWidth:width height:height];
-    
-    [self prepareToPick];
-    
-    CGFloat scale = UIScreen.mainScreen.scale;
-    //    glReadPixels(x * scale, (height - (y * scale)), 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixelColor);
-    
-    // Get info for picked location
-    const GLKVector2 scaledProjectionPosition = {
-        x / width,
-        y / height
-    };
-    [self readPixelsForPosition: scaledProjectionPosition pixels:pixelColor];
-    
-    //    glDeleteRenderbuffers(1, &colorRenderbuffer);
-    //    glDeleteFramebuffers(1, &framebuffer);
-    NSLog(@"R: %x, G: %x, B: %x, A: %x", (NSUInteger)pixelColor[0], (NSUInteger)pixelColor[1], (NSUInteger)pixelColor[2], (NSUInteger)pixelColor[3]);
-    
-    
-    // Restore OpenGL state that pickTerrainEffect changed
-    glBindFramebuffer(GL_FRAMEBUFFER, 0); // default frame buffer
-    glViewport(0, 0, width, height); // full area of glView
-    
-#ifdef DEBUG
-    {  // Report any errors
-        GLenum error = glGetError();
-        if(GL_NO_ERROR != error)
-        {
-            NSLog(@"GL Error: 0x%x", error);
-        }
-    }
-#endif
-    
-    return pixelColor[0];
-}
-
-/////////////////////////////////////////////////////////////////
-// This method prepares aPickEffect for rendering, clears the
-// frame buffer and draws the terrain within tiles.
-- (void)prepareToPick
-{
-    glBindVertexArrayOES(0);
-    
-    // Draw the terrain for tiles that weren't culled
-    
-    float aspect = fabsf(self.view.bounds.size.width / self.view.bounds.size.height);
-    GLKMatrix4 projectionMatrix = GLKMatrix4MakePerspective(GLKMathDegreesToRadians(65.0f), aspect, 4.0f, 10.0f);
-    self.effect.transform.projectionMatrix = projectionMatrix;
-    
-    
-    GLKMatrix4 modelViewMatrix = GLKMatrix4MakeTranslation(0.0f, 0.0f, -6.0f);
-    //modelViewMatrix = GLKMatrix4Multiply(modelViewMatrix, _rotMatrix);
-    GLKMatrix4 rotation = GLKMatrix4MakeWithQuaternion(_quat);
-    modelViewMatrix = GLKMatrix4Multiply(modelViewMatrix, rotation);
-    
-    self.effect.transform.modelviewMatrix = modelViewMatrix;
-    
-    [self prepareAttributes];
-    [self.effect prepareToDraw];
-    
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
-}
-
-#pragma mark -  Render Support
-
-/////////////////////////////////////////////////////////////////
-// This method configures OpenGL ES state by binding buffers, and
-// if necessary by passing vertex attribute data to the GPU.
-- (void)prepareAttributes;
-{
-    // Configure attributes
-    if(0 == self.glVertexAttributeBufferID)
-    {
-        GLuint  glName;
-        
-        glGenBuffers(1,                // STEP 1
-                     &glName);
-        glBindBuffer(GL_ARRAY_BUFFER,  // STEP 2
-                     glName);
-        
-        glBufferData(GL_ARRAY_BUFFER, sizeof(VerticesCube), VerticesCube, GL_STATIC_DRAW);           // Hint: cache in GPU memory
-        self.glVertexAttributeBufferID = glName;
-    }
-    else
-    {
-        glBindBuffer(GL_ARRAY_BUFFER,
-                     self.glVertexAttributeBufferID);
-    }
-    glEnableVertexAttribArray(0);
-}
-
-static const NSInteger TEPickTerrainFBOWidth = (512);
-static const NSInteger TEPickTerrainFBOHeight = (512);
-static const NSInteger TEPickTerrainMaxIndex = (255);
-
-/////////////////////////////////////////////////////////////////
-// This method returns the 3D X,Z coordinates of any terrain
-// at aPosition. The aPosition coordinates must be in the range
-// 0.0 to 1.0 corresponding to the relative location of aPosition
-// within a Cocoa Touch view a.k.a. "projection" coordinates.
-- (void)readPixelsForPosition:(GLKVector2)aPosition pixels:(GLvoid*)pixels
-{
-    //    GLubyte pixelColor[4];  // Red, Green, Blue, Alpha color
-    GLint readLocationX = MIN((TEPickTerrainFBOWidth - 1),
-                              (TEPickTerrainFBOWidth - 1) * aPosition.x);
-    GLint readLocationY = MIN((TEPickTerrainFBOHeight - 1),
-                              (TEPickTerrainFBOHeight - 1) * aPosition.y);
-    glReadPixels(readLocationX,
-                 readLocationY,
-                 1,
-                 1,
-                 GL_RGBA,
-                 GL_UNSIGNED_BYTE,
-                 pixels);
-    
-#ifdef DEBUG
-    {  // Report any errors
-        GLenum error = glGetError();
-        if(GL_NO_ERROR != error)
-        {
-            NSLog(@"GL Error: 0x%x", error);
-        }
-    }
-#endif
 }
 
 @end
