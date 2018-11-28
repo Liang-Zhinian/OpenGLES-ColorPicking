@@ -11,14 +11,6 @@
 #import "Geometry.h"
 #import "SphereCamera.h"
 
-Position F3(float x, float y, float z) {
-    Position p;
-    p.x = x;
-    p.y = y;
-    p.z = z;
-    return p;
-}
-
 @interface CubeView() {
     CGPoint _anchor_position;
     CGPoint _current_position;
@@ -30,39 +22,17 @@ Position F3(float x, float y, float z) {
     int _vertexBufferSize;
     GLuint _vertexArray;
     GLKBaseEffect* _cubeEffect;
-//    GLKViewController* _controller;
+    //    GLKViewController* _controller;
     SphereCamera* _camera;
     int _appendIndex;
 }
 
-@property GLKViewController* controller;
 //@property (strong, nonatomic) GLKBaseEffect *cubeEffect;
 
 @end
 
-@implementation CubeView 
+@implementation CubeView
 
-/*
-// Only override drawRect: if you perform custom drawing.
-// An empty implementation adversely affects performance during animation.
-- (void)drawRect:(CGRect)rect {
-    // Drawing code
-}
-*/
-
-static const NSDictionary* NORMAL = {
-    @"Y", F3(0,1,0),
-    @"-Y", F3(0,-1,0),
-    @"X", F3(1,0,0),
-    @"-X", F3(-1,0,0),
-    @"Z", F3(0,0,1),
-    @"-Z", F3(0,0,-1)
-};
-
-static const float PI = M_PI;
-
-Vertex vertices[] = {};
-GLuint indices[] = {};
 
 - (id)initWithCoder:(NSCoder *)aDecoder {
     _indexBufferSize = 36 * 4 * 1024 * 8;
@@ -104,7 +74,7 @@ GLuint indices[] = {};
     //        self.cubeEffect.light0.ambientColor = GLKVector4Make(1, 1, 1, 1);
     //        self.cubeEffect.light0.specularColor = GLKVector4Make(0, 0, 0, 1);
     
-//    [self configureDefaultLight];
+    //    [self configureDefaultLight];
 }
 
 #pragma mark - OpenGL Setup & Tear down
@@ -132,12 +102,14 @@ GLuint indices[] = {};
     // setup vertex buffer - what are my vertices?
     glGenBuffers(1, &_vertexBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, _vertexBuffer);
-    glBufferData(GL_ARRAY_BUFFER, _vertexBufferSize, vertices, GL_DYNAMIC_DRAW);
+    //    glBufferData(GL_ARRAY_BUFFER, _vertexBufferSize, vertices, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(VerticesCube), VerticesCube, GL_STATIC_DRAW);
     
     // setup index buffer - which vertices form a triangle?
     glGenBuffers(1, &_indexBuffer);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _indexBuffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, _indexBufferSize, indices, GL_DYNAMIC_DRAW);
+    //    glBufferData(GL_ELEMENT_ARRAY_BUFFER, _indexBufferSize, indices, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(IndicesTrianglesCube), IndicesTrianglesCube, GL_STATIC_DRAW);
     
     //Setup Vertex Atrributs
     glEnableVertexAttribArray(GLKVertexAttribPosition);
@@ -169,14 +141,6 @@ GLuint indices[] = {};
     _cubeEffect = nil;
 }
 
-- (void) pushVertexBufferAtCubeIndex:(int)cubeIndex AndNumber:(int)number {
-    glBufferSubData(GL_ARRAY_BUFFER, cubeIndex * 24 * sizeof(Vertex), number * 24 * sizeof(Vertex), &vertices + cubeIndex * 24 * sizeof(Vertex));
-}
-
-- (void) pushIndexBufferAtCubeIndex:(int)cubeIndex AndNumber:(int)number {
-    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, cubeIndex * 36 * sizeof(GLuint), number * 36 * sizeof(GLuint), &indices + cubeIndex * 36 * sizeof(GLuint));
-}
-
 - (void) resize {
     
     if (self.controller != nil) {
@@ -186,42 +150,6 @@ GLuint indices[] = {};
         
         //            Utils.setDelay(2, closure: testCreating)
     }
-}
-
-
-- (Vertex*) genOneCubeVerticesAtPosition:(GLKVector3)position Color:(Color)color {
-    
-    float x = position.x;
-    float y = position.y;
-    float z = position.z;
-    Vertex vertex[] = {0,};
-    
-    return vertex;
-}
-
-- (GLuint*) genOneCubeIndicesAtIndex:(int)index {
-    int vertexCount = index * 24;
-    GLuint cubeIndices[] = {
-            vertexCount, vertexCount+1, vertexCount+2,
-            vertexCount+2, vertexCount+3, vertexCount,
-            
-            vertexCount+4, vertexCount+6, vertexCount+5,
-            vertexCount+4, vertexCount+5, vertexCount+7,
-            
-            vertexCount+8, vertexCount+9, vertexCount+10,
-            vertexCount+10, vertexCount+11, vertexCount+8,
-            
-            vertexCount+12, vertexCount+13, vertexCount+14,
-            vertexCount+14, vertexCount+15, vertexCount+12,
-            
-            vertexCount+16, vertexCount+17, vertexCount+18,
-            vertexCount+18, vertexCount+19, vertexCount+16,
-            
-            vertexCount+20, vertexCount+21, vertexCount+22,
-            vertexCount+22, vertexCount+23, vertexCount+20
-    };
-    
-    return &cubeIndices;
 }
 
 - (NSDictionary*) intersectsTriangleWithNear:(GLKVector3)near
@@ -260,34 +188,29 @@ GLuint indices[] = {};
     }
 }
 
-- (void) testCreating {
-    
-    int delay = -1;
-    
-    
-    void (^delayFn)(void) = ^{
-        GLKVector3 pos = GLKVector3Make(_appendIndex % 10, _appendIndex%100 / 10, _appendIndex/100);
-        Color color;
-        color.r = _appendIndex % 10 / 10;
-        color.g = _appendIndex % 100 / 100;
-        color.b = _appendIndex % 1000 / 1000;
-        color.a = 1;
+- (void)glkView:(GLKView *)view drawInRect:(CGRect)rect {
+    if (self.controller != nil) {
         
-        GLuint* ves = [self genOneCubeVerticesAtPosition:pos Color: color];
-        GLuint* ins = [self genOneCubeIndicesAtIndex:_appendIndex];
-//        vertices.appendContentsOf(ves);
-//        indices.appendContentsOf(ins);
-//        pushVertexBuffer(_appendIndex, number: 1);
-//        pushIndexBuffer(_appendIndex, number: 1);
-        _appendIndex++;
+        [_cubeEffect prepareToDraw];
+        //        _cubeEffect.transform.modelviewMatrix = _camera.view;
         
-        if (delay < 1000) {
-//            delay = Utils.setDelay(0.005, closure: delayFn);
-        }
+        glClearColor(0, 0, 0, 1.0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
-    };
-    delayFn();
+        glBindVertexArrayOES(_vertexArray);
+        
+        //        glDrawElements(GL_TRIANGLES, sizeof(indices) / sizeof(indices[0]), GL_UNSIGNED_BYTE, 0);
+        
+        glDrawElements(GL_TRIANGLES, sizeof(IndicesTrianglesCube) / sizeof(IndicesTrianglesCube[0]), GL_UNSIGNED_BYTE, 0);
+    }
+}
+
+- (void)update {
     
+    float aspect = fabsf(self.bounds.size.width / self.bounds.size.height);
+    //    GLKMatrix4 projectionMatrix = GLKMatrix4MakePerspective(GLKMathDegreesToRadians(65.0f), aspect, 4.0f, 10.0f);
+    GLKMatrix4 projectionMatrix = GLKMatrix4MakePerspective(GLKMathDegreesToRadians(65.0f), aspect, 0.1f, 100.0f);
+    _cubeEffect.transform.projectionMatrix = projectionMatrix;
 }
 
 @end

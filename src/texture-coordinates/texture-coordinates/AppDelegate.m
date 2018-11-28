@@ -7,6 +7,7 @@
 //
 
 #import "AppDelegate.h"
+#import "CubeViewController.h"
 
 @interface AppDelegate ()
 
@@ -17,6 +18,14 @@
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     // Override point for customization after application launch.
+//    self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
+//    // Override point for customization after application launch.
+//    self.window.backgroundColor = [UIColor whiteColor];
+//    [self.window makeKeyAndVisible];
+//
+//    CubeViewController *mainViewController = [[CubeViewController alloc] init];
+//    self.window.rootViewController = mainViewController;
+    
     return YES;
 }
 

@@ -31,6 +31,17 @@ typedef struct{
     float a;
 } Color;
 
+typedef struct{
+    float x;
+    float y;
+} TexCoord;
+
+typedef struct{
+    float s;
+    float t;
+    float p;
+} Normal;
+
 extern const Vertex VerticesCube[24];
 
 extern const GLubyte IndicesTrianglesCube[36];

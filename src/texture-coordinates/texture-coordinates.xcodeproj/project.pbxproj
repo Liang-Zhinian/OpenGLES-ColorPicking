@@ -19,10 +19,12 @@
 		2F3BAE241AA276020040DDC4 /* Geometry.m in Sources */ = {isa = PBXBuildFile; fileRef = 2F3BAE231AA276020040DDC4 /* Geometry.m */; };
 		8A3B350921ABFD3800C3C8E3 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A3B350821ABFD3800C3C8E3 /* ViewController.m */; };
 		8A3CF08221AA496D00417F25 /* Camera.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A3CF08121AA496D00417F25 /* Camera.swift */; };
+		8A96B2FB21AE769500B58DD7 /* CubeViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A96B2FA21AE769500B58DD7 /* CubeViewController.m */; };
+		8A96B2FD21AE864A00B58DD7 /* CubeView.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A96B2FC21AE864A00B58DD7 /* CubeView.m */; };
 		8AB12B4421ACDFC700B81FA8 /* Vector4f.m in Sources */ = {isa = PBXBuildFile; fileRef = 8AB12B4321ACDFC700B81FA8 /* Vector4f.m */; };
 		8AB12B4921ACE76E00B81FA8 /* AbstractCamera.m in Sources */ = {isa = PBXBuildFile; fileRef = 8AB12B4821ACE76E00B81FA8 /* AbstractCamera.m */; };
 		8AB12B4C21ACE9CA00B81FA8 /* SphereCamera.m in Sources */ = {isa = PBXBuildFile; fileRef = 8AB12B4B21ACE9CA00B81FA8 /* SphereCamera.m */; };
-		8AB12B5121ACF87200B81FA8 /* CubeView.m in Sources */ = {isa = PBXBuildFile; fileRef = 8AB12B5021ACF87200B81FA8 /* CubeView.m */; };
+		8AB12B5121ACF87200B81FA8 /* CubeView.m.txt in Sources */ = {isa = PBXBuildFile; fileRef = 8AB12B5021ACF87200B81FA8 /* CubeView.m.txt */; };
 		8AFDE10321A7AB75001BA52E /* DLTriangle.m in Sources */ = {isa = PBXBuildFile; fileRef = 8AFDE10221A7AB75001BA52E /* DLTriangle.m */; };
 		8AFDE10E21A800EF001BA52E /* ViewController.m.txt1 in Sources */ = {isa = PBXBuildFile; fileRef = 8AFDE10D21A800EF001BA52E /* ViewController.m.txt1 */; };
 		8AFDE11021A80248001BA52E /* tile_floor.png in Resources */ = {isa = PBXBuildFile; fileRef = 8AFDE10F21A80248001BA52E /* tile_floor.png */; };
@@ -59,6 +61,9 @@
 		8A3B350821ABFD3800C3C8E3 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
 		8A3CF07E21AA495300417F25 /* texture-coordinates-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "texture-coordinates-Bridging-Header.h"; sourceTree = "<group>"; };
 		8A3CF08121AA496D00417F25 /* Camera.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Camera.swift; sourceTree = "<group>"; };
+		8A96B2F921AE769500B58DD7 /* CubeViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CubeViewController.h; sourceTree = "<group>"; };
+		8A96B2FA21AE769500B58DD7 /* CubeViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CubeViewController.m; sourceTree = "<group>"; };
+		8A96B2FC21AE864A00B58DD7 /* CubeView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CubeView.m; sourceTree = "<group>"; };
 		8AB12B4321ACDFC700B81FA8 /* Vector4f.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Vector4f.m; sourceTree = "<group>"; };
 		8AB12B4521ACDFFA00B81FA8 /* Vector4f.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Vector4f.h; sourceTree = "<group>"; };
 		8AB12B4721ACE76E00B81FA8 /* AbstractCamera.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AbstractCamera.h; sourceTree = "<group>"; };
@@ -66,7 +71,7 @@
 		8AB12B4A21ACE9CA00B81FA8 /* SphereCamera.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SphereCamera.h; sourceTree = "<group>"; };
 		8AB12B4B21ACE9CA00B81FA8 /* SphereCamera.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SphereCamera.m; sourceTree = "<group>"; };
 		8AB12B4F21ACF87200B81FA8 /* CubeView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CubeView.h; sourceTree = "<group>"; };
-		8AB12B5021ACF87200B81FA8 /* CubeView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CubeView.m; sourceTree = "<group>"; };
+		8AB12B5021ACF87200B81FA8 /* CubeView.m.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = CubeView.m.txt; sourceTree = "<group>"; };
 		8AFDE10121A7AB75001BA52E /* DLTriangle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLTriangle.h; sourceTree = "<group>"; };
 		8AFDE10221A7AB75001BA52E /* DLTriangle.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLTriangle.m; sourceTree = "<group>"; };
 		8AFDE10D21A800EF001BA52E /* ViewController.m.txt1 */ = {isa = PBXFileReference; lastKnownFileType = text; path = ViewController.m.txt1; sourceTree = "<group>"; };
@@ -135,7 +140,10 @@
 				8AFDE10221A7AB75001BA52E /* DLTriangle.m */,
 				8A3CF07E21AA495300417F25 /* texture-coordinates-Bridging-Header.h */,
 				8AB12B4F21ACF87200B81FA8 /* CubeView.h */,
-				8AB12B5021ACF87200B81FA8 /* CubeView.m */,
+				8A96B2FC21AE864A00B58DD7 /* CubeView.m */,
+				8AB12B5021ACF87200B81FA8 /* CubeView.m.txt */,
+				8A96B2FA21AE769500B58DD7 /* CubeViewController.m */,
+				8A96B2F921AE769500B58DD7 /* CubeViewController.h */,
 			);
 			path = "texture-coordinates";
 			sourceTree = "<group>";
@@ -293,9 +301,11 @@
 				8AFDE10E21A800EF001BA52E /* ViewController.m.txt1 in Sources */,
 				8AFDE10321A7AB75001BA52E /* DLTriangle.m in Sources */,
 				8A3B350921ABFD3800C3C8E3 /* ViewController.m in Sources */,
-				8AB12B5121ACF87200B81FA8 /* CubeView.m in Sources */,
+				8AB12B5121ACF87200B81FA8 /* CubeView.m.txt in Sources */,
 				2F3BAE011AA275910040DDC4 /* ViewController.m.txt in Sources */,
+				8A96B2FB21AE769500B58DD7 /* CubeViewController.m in Sources */,
 				8AB12B4C21ACE9CA00B81FA8 /* SphereCamera.m in Sources */,
+				8A96B2FD21AE864A00B58DD7 /* CubeView.m in Sources */,
 				8AB12B4921ACE76E00B81FA8 /* AbstractCamera.m in Sources */,
 				2F3BAE241AA276020040DDC4 /* Geometry.m in Sources */,
 				2F3BADFE1AA275910040DDC4 /* AppDelegate.m in Sources */,

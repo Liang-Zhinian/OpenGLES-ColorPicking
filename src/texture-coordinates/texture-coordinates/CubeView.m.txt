@@ -1,0 +1,510 @@
+//
+//  CubeView.m
+//  texture-coordinates
+//
+//  Created by sprite on 2018/11/27.
+//  Copyright © 2018年 Christoph Halang. All rights reserved.
+//
+
+#import "CubeView.h"
+#import <OpenGLES/ES2/glext.h>
+#import "Geometry.h"
+#import "SphereCamera.h"
+
+Position F3(float x, float y, float z) {
+    Position p = {x, y, z};
+    return p;
+}
+
+Position MakePosition(float f[3]){
+    Position p = {f[0], f[1], f[2]};
+    return p;
+}
+
+Color MakeColor(float r, float g, float b, float a){
+    Color c = {r, g, b, a};
+    return c;
+}
+
+Normal MakeNormal(float s, float t, float p) {
+    Normal n = {s, t, p};
+    return n;
+}
+
+Normal MakeNormal3(float f[3]) {
+    Normal n = {f[0], f[1], f[2]};
+    return n;
+}
+
+Vertex MakeVertex(Position p, Color c, Normal n) {
+    Vertex v;
+    v.Position[0] = p.x;
+    v.Position[1] = p.y;
+    v.Position[2] = p.z;
+    v.Color[0] = c.r;
+    v.Color[1] = c.g;
+    v.Color[2] = c.b;
+    v.Color[3] = c.a;
+    v.Normal[0] = n.s;
+    v.Normal[1] = n.t;
+    v.Normal[2] = n.p;
+    return v;
+}
+
+
+
+@interface CubeView() {
+    CGPoint _anchor_position;
+    CGPoint _current_position;
+    float _beta;
+    float _garma;
+    GLuint _indexBuffer;
+    int _indexBufferSize;
+    GLuint _vertexBuffer;
+    int _vertexBufferSize;
+    GLuint _vertexArray;
+    GLKBaseEffect* _cubeEffect;
+//    GLKViewController* _controller;
+    SphereCamera* _camera;
+    int _appendIndex;
+}
+
+//@property (strong, nonatomic) GLKBaseEffect *cubeEffect;
+
+@end
+
+@implementation CubeView 
+
+/*
+// Only override drawRect: if you perform custom drawing.
+// An empty implementation adversely affects performance during animation.
+- (void)drawRect:(CGRect)rect {
+    // Drawing code
+}
+*/
+
+static const NSDictionary* NORMAL = {
+    @"Y", F3(0,1,0),
+    @"-Y", F3(0,-1,0),
+    @"X", F3(1,0,0),
+    @"-X", F3(-1,0,0),
+    @"Z", F3(0,0,1),
+    @"-Z", F3(0,0,-1)
+};
+
+static const float PI = M_PI;
+
+Vertex vertices[24] = {};
+GLuint indices[36] = {};
+
+- (id)initWithCoder:(NSCoder *)aDecoder {
+    _indexBufferSize = 36 * 4 * 1024 * 8;
+    _vertexBufferSize = 24 * 40 * 1024 * 8;
+    _appendIndex=0;
+    
+    self = [super initWithCoder:aDecoder];
+    
+    self.context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2];
+    
+    self.drawableColorFormat = GLKViewDrawableColorFormatRGBA8888;
+    self.drawableDepthFormat = GLKViewDrawableDepthFormat16;
+    self.drawableStencilFormat = GLKViewDrawableStencilFormat8;
+    self.drawableMultisample = GLKViewDrawableMultisample4X;
+    
+    if (!self.context) {
+        NSLog(@"Failed to create ES context");
+        exit(1);
+    }
+    
+    if (![EAGLContext setCurrentContext:self.context]) {
+        NSLog(@"Failed to set current OpenGL context!");
+        exit(1);
+    }
+    
+    [EAGLContext setCurrentContext:self.context];
+    [self initEffect];
+    [self setupGL];
+    
+    return self;
+}
+
+- (void)initEffect {
+    _cubeEffect = [[GLKBaseEffect alloc] init];
+//    _cubeEffect.colorMaterialEnabled = GL_TRUE;
+//    _cubeEffect.light0.enabled = GL_TRUE;
+//    _cubeEffect.light0.position = GLKVector4Make(0, 10, 0, 1);
+    //        self.cubeEffect.light0.diffuseColor = GLKVector4Make(1, 1, 1, 1.0);
+    //        self.cubeEffect.light0.ambientColor = GLKVector4Make(1, 1, 1, 1);
+    //        self.cubeEffect.light0.specularColor = GLKVector4Make(0, 0, 0, 1);
+    
+//    [self configureDefaultLight];
+}
+
+#pragma mark - OpenGL Setup & Tear down
+
+- (void)setupGL {
+    
+    // init GL stuff here
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glDepthFunc(GL_LEQUAL);
+    // Enable Transparency
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    glEnable(GL_CULL_FACE);
+    
+    // Create Vertex Array Buffer For Vertex Array Objects
+    glGenVertexArraysOES(1, &_vertexArray);
+    glBindVertexArrayOES(_vertexArray);
+    
+    
+    // All of the following configuration for per vertex data is stored into the VAO
+    
+    // setup vertex buffer - what are my vertices?
+    glGenBuffers(1, &_vertexBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, _vertexBuffer);
+//    glBufferData(GL_ARRAY_BUFFER, _vertexBufferSize, vertices, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(VerticesCube), VerticesCube, GL_STATIC_DRAW);
+    
+    // setup index buffer - which vertices form a triangle?
+    glGenBuffers(1, &_indexBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _indexBuffer);
+//    glBufferData(GL_ELEMENT_ARRAY_BUFFER, _indexBufferSize, indices, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(IndicesTrianglesCube), IndicesTrianglesCube, GL_STATIC_DRAW);
+    
+    //Setup Vertex Atrributs
+    glEnableVertexAttribArray(GLKVertexAttribPosition);
+    //SYNTAX -,number of elements per vertex, datatype, FALSE, size of element, offset in datastructure
+    glVertexAttribPointer(GLKVertexAttribPosition, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *) offsetof(Vertex, Position));
+    
+    glEnableVertexAttribArray(GLKVertexAttribColor);
+    glVertexAttribPointer(GLKVertexAttribColor, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *) offsetof(Vertex, Color));
+    
+    //Textures
+    glEnableVertexAttribArray(GLKVertexAttribTexCoord0);
+    glVertexAttribPointer(GLKVertexAttribTexCoord0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *) offsetof(Vertex, TexCoord));
+    
+    //Normals
+    glEnableVertexAttribArray(GLKVertexAttribNormal);
+    glVertexAttribPointer(GLKVertexAttribNormal, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *) offsetof(Vertex, Normal));
+    
+    
+    glBindVertexArrayOES(0);
+}
+
+- (void)tearDownGL {
+    
+    [EAGLContext setCurrentContext:self.context];
+    
+    glDeleteBuffers(1, &_vertexBuffer);
+    glDeleteBuffers(1, &_indexBuffer);
+    glDeleteVertexArraysOES(1, &_vertexArray);
+    _cubeEffect = nil;
+}
+
+- (void) pushVertexBufferAtCubeIndex:(int)cubeIndex AndNumber:(int)number {
+    glBufferSubData(GL_ARRAY_BUFFER, cubeIndex * 24 * sizeof(Vertex), number * 24 * sizeof(Vertex), &vertices + cubeIndex * 24 * sizeof(Vertex));
+}
+
+- (void) pushIndexBufferAtCubeIndex:(int)cubeIndex AndNumber:(int)number {
+    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, cubeIndex * 36 * sizeof(GLuint), number * 36 * sizeof(GLuint), &indices + cubeIndex * 36 * sizeof(GLuint));
+}
+
+- (void) resize {
+    
+    if (self.controller != nil) {
+        _camera = [[SphereCamera alloc] initWithWidth: self.bounds.size.width Height: self.bounds.size.height];
+        
+        _cubeEffect.transform.projectionMatrix = _camera.projection;
+        
+        //            Utils.setDelay(2, closure: testCreating)
+    }
+}
+
+- (void) genOneCubeVertices:(Vertex*)vertices AtPosition:(GLKVector3)position Color:(Color)color {
+    
+    float x = position.x;
+    float y = position.y;
+    float z = position.z;
+    
+    Normal n;
+    [[NORMAL valueForKey: @"Z"] getValue:&n];
+    vertices[0] = MakeVertex(F3(x+0.5, y-0.5, z+0.5), color, n);
+    
+    [[NORMAL valueForKey: @"Z"] getValue:&n];
+    vertices[1] = MakeVertex(F3(x+0.5, y+0.5, z+0.5), color, n);
+    
+    [[NORMAL valueForKey: @"Z"] getValue:&n];
+    vertices[2] = MakeVertex(F3(x-0.5, y+0.5, z+0.5), color, n);
+    
+    [[NORMAL valueForKey: @"Z"] getValue:&n];
+    vertices[3] = MakeVertex(F3(x-0.5, y-0.5, z+0.5), color, n);
+    
+    [[NORMAL valueForKey: @"-Z"] getValue:&n];
+    vertices[4] = MakeVertex(F3(x+0.5, y+0.5, z-0.5), color, n);
+    
+    [[NORMAL valueForKey: @"-Z"] getValue:&n];
+    vertices[5] = MakeVertex(F3(x-0.5, y-0.5, z-0.5), color, n);
+    
+    [[NORMAL valueForKey: @"-Z"] getValue:&n];
+    vertices[6] = MakeVertex(F3(x+0.5, y-0.5, z-0.5), color, n);
+    
+    [[NORMAL valueForKey: @"-Z"] getValue:&n];
+    vertices[7] = MakeVertex(F3(x-0.5, y+0.5, z-0.5), color, n);
+    
+    [[NORMAL valueForKey: @"-X"] getValue:&n];
+    vertices[8] = MakeVertex(F3(x-0.5, y-0.5, z+0.5), color, n);
+    
+    [[NORMAL valueForKey: @"-X"] getValue:&n];
+    vertices[9] = MakeVertex(F3(x-0.5, y+0.5, z+0.5), color, n);
+    
+    [[NORMAL valueForKey: @"-X"] getValue:&n];
+    vertices[10] = MakeVertex(F3(x-0.5, y+0.5, z-0.5), color, n);
+    
+    [[NORMAL valueForKey: @"-X"] getValue:&n];
+    vertices[11] = MakeVertex(F3(x-0.5, y-0.5, z-0.5), color, n);
+    
+    [[NORMAL valueForKey: @"X"] getValue:&n];
+    vertices[12] = MakeVertex(F3(x+0.5, y-0.5, z-0.5), color, n);
+    
+    [[NORMAL valueForKey: @"X"] getValue:&n];
+    vertices[13] = MakeVertex(F3(x+0.5, y+0.5, z-0.5), color, n);
+    
+    [[NORMAL valueForKey: @"X"] getValue:&n];
+    vertices[14] = MakeVertex(F3(x+0.5, y+0.5, z+0.5), color, n);
+    
+    [[NORMAL valueForKey: @"X"] getValue:&n];
+    vertices[15] = MakeVertex(F3(x+0.5, y-0.5, z+0.5), color, n);
+    
+    [[NORMAL valueForKey: @"Y"] getValue:&n];
+    vertices[16] = MakeVertex(F3(x+0.5, y+0.5, z+0.5), color, n);
+    
+    [[NORMAL valueForKey: @"Y"] getValue:&n];
+    vertices[17] = MakeVertex(F3(x+0.5, y+0.5, z-0.5), color, n);
+    
+    [[NORMAL valueForKey: @"Y"] getValue:&n];
+    vertices[18] = MakeVertex(F3(x-0.5, y+0.5, z-0.5), color, n);
+    
+    [[NORMAL valueForKey: @"Y"] getValue:&n];
+    vertices[19] = MakeVertex(F3(x-0.5, y+0.5, z+0.5), color, n);
+    
+    [[NORMAL valueForKey: @"-Y"] getValue:&n];
+    vertices[20] = MakeVertex(F3(x+0.5, y-0.5, z-0.5), color, n);
+    
+    [[NORMAL valueForKey: @"-Y"] getValue:&n];
+    vertices[21] = MakeVertex(F3(x+0.5, y-0.5, z+0.5), color, n);
+    
+    [[NORMAL valueForKey: @"-Y"] getValue:&n];
+    vertices[22] = MakeVertex(F3(x-0.5, y-0.5, z+0.5), color, n);
+    
+    [[NORMAL valueForKey: @"-Y"] getValue:&n];
+    vertices[23] = MakeVertex(F3(x-0.5, y-0.5, z-0.5), color, n);
+}
+
+- (void) genOneCubeIndices:(GLuint*)cubeIndices AtIndex:(int)index {
+    int vertexCount = index * 24;
+    cubeIndices[0] = vertexCount;
+    cubeIndices[1] = vertexCount+1;
+    cubeIndices[2] = vertexCount+2;
+    cubeIndices[3] = vertexCount+2;
+    cubeIndices[4] = vertexCount+3;
+    cubeIndices[5] = vertexCount;
+    cubeIndices[6] = vertexCount+4;
+    cubeIndices[7] = vertexCount+6;
+    cubeIndices[8] = vertexCount+5;
+    cubeIndices[9] = vertexCount+4;
+    cubeIndices[10] = vertexCount+5;
+    cubeIndices[11] = vertexCount+7;
+    cubeIndices[12] = vertexCount+8;
+    cubeIndices[13] = vertexCount+9;
+    cubeIndices[14] = vertexCount+10;
+    cubeIndices[15] = vertexCount+10;
+    cubeIndices[16] = vertexCount+11;
+    cubeIndices[17] = vertexCount+8;
+    cubeIndices[18] = vertexCount+12;
+    cubeIndices[19] = vertexCount+13;
+    cubeIndices[20] = vertexCount+14;
+    cubeIndices[21] = vertexCount+14;
+    cubeIndices[22] = vertexCount+15;
+    cubeIndices[23] = vertexCount+12;
+    cubeIndices[24] = vertexCount+16;
+    cubeIndices[25] = vertexCount+17;
+    cubeIndices[26] = vertexCount+18;
+    cubeIndices[27] = vertexCount+18;
+    cubeIndices[28] = vertexCount+19;
+    cubeIndices[29] = vertexCount+16;
+    cubeIndices[30] = vertexCount+20;
+    cubeIndices[31] = vertexCount+21;
+    cubeIndices[32] = vertexCount+22;
+    cubeIndices[33] = vertexCount+22;
+    cubeIndices[34] = vertexCount+23;
+    cubeIndices[35] = vertexCount+20;
+    
+}
+
+- (NSDictionary*) intersectsTriangleWithNear:(GLKVector3)near
+                                         Far:(GLKVector3)far
+                                           A:(GLKVector3)a
+                                           B:(GLKVector3)b
+                                           C:(GLKVector3)c
+                                      Normal:(GLKVector3)normal {
+    //follow http://sarvanz.blogspot.com/2012/03/probing-using-ray-casting-in-opengl.html
+    
+    GLKVector3 ray = GLKVector3Subtract(far, near);
+    float nDotL = GLKVector3DotProduct(normal, ray);
+    //是否跟三角面在同一平面或者背对三角面
+    if (nDotL >= 0) {
+        return @{ @"intersect": @NO, @"result": [NSNull null] };
+    }
+    
+    float d = GLKVector3DotProduct(normal, GLKVector3Subtract(a, near)) / nDotL;
+    //是否在最近点和最远点之外
+    if (d < 0 || d > 1) {
+        return @{ @"intersect": @NO, @"result": [NSNull null] };
+    }
+    
+    GLKVector3 p = GLKVector3Add(near, GLKVector3MultiplyScalar(ray, d));
+    GLKVector3 n1 = GLKVector3CrossProduct( GLKVector3Subtract(b, a),  GLKVector3Subtract(p, a));
+    GLKVector3 n2 = GLKVector3CrossProduct( GLKVector3Subtract(c, b),  GLKVector3Subtract(p, b));
+    GLKVector3 n3 = GLKVector3CrossProduct( GLKVector3Subtract(a, c),  GLKVector3Subtract(p, c));
+    
+    if (GLKVector3DotProduct(normal, n1) >= 0 &&
+        GLKVector3DotProduct(normal, n2) >= 0 &&
+        GLKVector3DotProduct(normal, n3) >= 0) {
+        NSDictionary *dictionary = @{ @"intersect": @YES, @"result": [NSValue value:&p withObjCType:@encode(GLKVector3)] };
+        return dictionary;
+    }else{
+        return @{ @"intersect": @NO, @"result": [NSNull null] };
+    }
+}
+
+- (void) testCreating {
+    
+    int delay = -1;
+    
+    
+    void (^delayFn)(void) = ^{
+        GLKVector3 pos = GLKVector3Make(_appendIndex % 10, _appendIndex%100 / 10, _appendIndex/100);
+        Color color;
+        color.r = _appendIndex % 10 / 10;
+        color.g = _appendIndex % 100 / 100;
+        color.b = _appendIndex % 1000 / 1000;
+        color.a = 1;
+        
+        GLuint ves[24];
+        [self genOneCubeVertices:ves AtPosition:pos Color: color];
+        GLuint ins[36];
+        [self genOneCubeIndices:ins AtIndex:self->_appendIndex];
+        
+        memcpy(vertices, ves, sizeof(ves));
+        memcpy(indices, ins, sizeof(ins));
+        
+        [self pushVertexBufferAtCubeIndex:_appendIndex AndNumber:1];
+        [self pushIndexBufferAtCubeIndex:_appendIndex AndNumber:1];
+        
+        _appendIndex++;
+        
+        if (delay < 1000) {
+//            delay = Utils.setDelay(0.005, closure: delayFn);
+        }
+        
+    };
+    delayFn();
+    
+}
+
+- (void) pickAtX:(CGFloat)x Y:(CGFloat)y {
+    
+    //follow http://schabby.de/picking-opengl-ray-tracing/
+    GLKVector3 viewVector3 = GLKVector3Normalize(GLKVector3Subtract(_camera.target, _camera.position));
+    GLKVector3 hVector3 = GLKVector3Normalize(GLKVector3CrossProduct(viewVector3, _camera.up));
+    GLKVector3 vVector3 = GLKVector3Normalize(GLKVector3CrossProduct(hVector3, viewVector3));
+    
+    CGFloat width = _camera.width;
+    CGFloat height = _camera.height;
+    
+    // convert fovy to radians
+    float rad = _camera.fov * PI / 180;
+    float vLength = tan( rad / 2 ) * _camera.near;
+    float hLength = vLength * (width / height);
+    
+    vVector3 = GLKVector3MultiplyScalar(vVector3, vLength);
+    hVector3 = GLKVector3MultiplyScalar(hVector3, hLength);
+    
+    // translate mouse coordinates so that the origin lies in the center
+    // of the view port
+    float xPoint = x - width / 2;
+    float yPoint = y - height / 2;
+    xPoint = xPoint/width * 2;
+    yPoint = -yPoint/height * 2;
+    
+    
+    
+    
+    // compute direction of picking ray by subtracting intersection point
+    
+    GLKVector3 direction = GLKVector3Add(GLKVector3MultiplyScalar(viewVector3, _camera.near), GLKVector3MultiplyScalar(hVector3, xPoint));
+    direction = GLKVector3Add(direction, GLKVector3MultiplyScalar(vVector3, yPoint));
+    
+    // linear combination to compute intersection of picking ray with
+    // view port plane
+    GLKVector3 near = GLKVector3Add(_camera.position, direction);
+    GLKVector3 far = GLKVector3Add(_camera.position, GLKVector3MultiplyScalar(direction, _camera.far / _camera.near));
+    
+    //print("near : " + String(near.x) + " " + String(near.y) + " " + String(near.z))
+    //print("far : " + String(far.x) + " " + String(far.y) + " " + String(far.z))
+    
+    for (int index = 1; index <= sizeof(indices); index++) {
+        if (index != 1 && index % 3 == 0){
+            Position aa = MakePosition(vertices[indices[index-3]].Position);
+            Position bb = MakePosition(vertices[indices[index-2]].Position);
+            Position cc = MakePosition(vertices[indices[index-1]].Position);
+            Normal nn = MakeNormal3(vertices[indices[index-1]].Normal);
+            GLKVector3 a = GLKVector3Make(aa.x, aa.y, aa.z);
+            GLKVector3 b = GLKVector3Make(bb.x, bb.y, bb.z);
+            GLKVector3 c = GLKVector3Make(cc.x, cc.y, cc.z);
+            GLKVector3 n = GLKVector3Make(nn.s, nn.t, nn.p);
+            NSDictionary* data = [self intersectsTriangleWithNear: near
+                                                              Far: far
+                                                                A: a
+                                                                B: b
+                                                                C: c
+                                                           Normal: n];
+            BOOL intersect = [[data objectForKey:@"intersect"] boolValue];
+            if (intersect) {
+                Position result;
+                [[data objectForKey:@"result"] getValue:&result];
+                NSLog(@"%x %x %x", result.x, result.y, result.z);
+            }
+        }
+    }
+}
+
+- (void)glkView:(GLKView *)view drawInRect:(CGRect)rect {
+    if (self.controller != nil) {
+        
+        [_cubeEffect prepareToDraw];
+//        _cubeEffect.transform.modelviewMatrix = _camera.view;
+        
+        glClearColor(0, 0, 0, 1.0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        glBindVertexArrayOES(_vertexArray);
+        
+//        glDrawElements(GL_TRIANGLES, sizeof(indices) / sizeof(indices[0]), GL_UNSIGNED_BYTE, 0);
+        
+        glDrawElements(GL_TRIANGLES, sizeof(IndicesTrianglesCube) / sizeof(IndicesTrianglesCube[0]), GL_UNSIGNED_BYTE, 0);
+    }
+}
+
+- (void)update {
+    
+    float aspect = fabsf(self.bounds.size.width / self.bounds.size.height);
+    //    GLKMatrix4 projectionMatrix = GLKMatrix4MakePerspective(GLKMathDegreesToRadians(65.0f), aspect, 4.0f, 10.0f);
+    GLKMatrix4 projectionMatrix = GLKMatrix4MakePerspective(GLKMathDegreesToRadians(65.0f), aspect, 0.1f, 100.0f);
+    _cubeEffect.transform.projectionMatrix = projectionMatrix;
+}
+
+@end

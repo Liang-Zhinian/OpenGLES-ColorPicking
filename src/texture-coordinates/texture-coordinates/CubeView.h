@@ -15,6 +15,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface CubeView : GLKView
 
+@property(strong, nonatomic) GLKViewController* controller;
+- (void) resize;
+
 @end
 
 NS_ASSUME_NONNULL_END

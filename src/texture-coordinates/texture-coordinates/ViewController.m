@@ -9,6 +9,7 @@
 #import "ViewController.h"
 #import <OpenGLES/ES2/glext.h>
 #import "Geometry.h"
+#import "SphereCamera.h"
 
 @interface ViewController (){
     float _curRed;
@@ -31,6 +32,7 @@
     
     EAGLContext* _context;
     GLKBaseEffect* _effect;
+    SphereCamera* _camera;
     BOOL _initialized;
     
     BOOL _autoRotate;
@@ -67,15 +69,22 @@
     self.projectionMatrix  = GLKMatrix4MakePerspective(GLKMathDegreesToRadians(65.0f), 4.0/3.0, 1, 51);
     
     [self initEffect];
+    [self initCamera];
     [self setupGL];
     
-    _autoRotate = YES;
+    _autoRotate = NO;
 }
 
 - (void)initEffect {
     _effect = [[GLKBaseEffect alloc] init];
     [self configureDefaultLight];
     _initialized = YES;
+}
+
+- (void)initCamera {
+    _camera = [[SphereCamera alloc] initWithWidth: self.view.bounds.size.width Height: self.view.bounds.size.height];
+    if (_effect != nil)
+        _effect.transform.projectionMatrix = _camera.projection;
 }
 
 - (void)didReceiveMemoryWarning {
@@ -88,6 +97,7 @@
 
 - (void)prepareEffectWithModelMatrix:(GLKMatrix4)modelMatrix viewMatrix:(GLKMatrix4)viewMatrix projectionMatrix:(GLKMatrix4)projectionMatrix{
     _effect.transform.modelviewMatrix = GLKMatrix4Multiply(viewMatrix, modelMatrix);
+//    _effect.transform.modelviewMatrix = _camera.view;
     _effect.transform.projectionMatrix = projectionMatrix;
     [_effect prepareToDraw];
 }
