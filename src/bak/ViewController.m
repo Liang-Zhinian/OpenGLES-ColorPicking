@@ -9,7 +9,8 @@
 #import "ViewController.h"
 #import <OpenGLES/ES2/glext.h>
 #import "Geometry.h"
-#import "SphereCamera.h"
+//#import "SphereCamera.h"
+#import "texture_coordinates-Swift.h"
 
 
 Position MakePosition(float f[3]){
@@ -97,6 +98,9 @@ Normal MakeNormal3(float f[3]) {
     [self setupGL];
     
     _autoRotate = NO;
+    
+    Test *test = [[Test alloc] init];
+    [test greet];
 }
 
 - (void)initEffect {

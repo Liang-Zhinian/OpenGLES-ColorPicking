@@ -9,7 +9,8 @@
 #import "CubeView.h"
 #import <OpenGLES/ES2/glext.h>
 #import "Geometry.h"
-#import "SphereCamera.h"
+//#import "SphereCamera.h"
+#import "texture_coordinates-Swift.h"
 
 @interface CubeView() {
     CGPoint _anchor_position;

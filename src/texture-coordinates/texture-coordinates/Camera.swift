@@ -17,7 +17,7 @@ import GLKit
 
 @objc class SphereCamera : AbstractCamera {
     
-    let PI = Float(M_PI)
+    let PI = Float(Double.pi)
     var position : GLKVector3!
     var beta : Float
     var garma : Float
